@@ -1,6 +1,6 @@
 # Pro_dexire
 
-Pro_dexire extends DEXiRE explanations to include uncertainty and probability reasoning.
+Pro_dexire extends DEXiRE explanations to include unstructured data, uncertainty and probability reasoning.
 
 <!-- trunk-ignore(markdownlint/MD033) -->
 <p align="center">
