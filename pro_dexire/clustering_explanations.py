@@ -5,11 +5,13 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.exceptions import NotFittedError
 from sklearn.datasets import make_blobs
 from sklearn.decomposition import PCA, KernelPCA
+from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 from typing import Tuple
 from yellowbrick.cluster import KElbowVisualizer
 from pathlib import Path
 import pickle
+import umap
 from enum import Enum
 
 class DimensionalityReduction(str, Enum):
@@ -21,10 +23,14 @@ class DimensionalityReduction(str, Enum):
     
 
 class ClusterAnalysis:
-    def __init__(self, n_cluster:int=None) -> None:
+    def __init__(self, 
+                 n_cluster:int=None, 
+                 normalize: bool = True) -> None:
         self.n_clusters = n_cluster
         self.cluster_model = None
         self.wcss = []
+        self.normalize = normalize
+        self.scaler = StandardScaler()
     
     def fit(self, X: np.array, n_clusters: int = None) -> None:
         if n_clusters is not None and n_clusters > 1:
@@ -48,16 +54,12 @@ class ClusterAnalysis:
                 print(f"The  model have not been fitted and cannot be used for prediction.")
                 raise Exception("The cluster number have not been set. Model cannot be fitted.")
             return self.cluster_model.predict(X)
-        
-    
-    def score(self, X: np.array, y: np.array) -> float:
-        #TODO: Implement score method
-        pass
     
     def automatically_choose_cluster_numbers(self, 
                                              X: np.array, 
                                              max_clusters: int = 11) -> bool:
-        
+        if self.normalize:
+            X = self.scaler.fit_transform(X)
         possible_n_clusters = np.arange(2, max_clusters)
         for i in possible_n_clusters:
             kmeans = KMeans(n_clusters=i, init='k-means++', 
@@ -66,6 +68,7 @@ class ClusterAnalysis:
                             random_state=0)
             kmeans.fit(X)
             self.wcss.append(kmeans.inertia_)
+        self.plot_elbow(X, max_cluster=max_clusters)
         # Calculate the deltas with first derivate
         delta_wcss = np.diff(self.wcss)
         # Second derivate difference 
@@ -78,7 +81,10 @@ class ClusterAnalysis:
         self.fit(X, self.n_clusters)
         return True
         
-    def plot_elbow(self, X: np.array, out_file: Path = None, max_cluster: int = 11) -> None:
+    def plot_elbow(self, 
+                   X: np.array, 
+                   out_file: Path = None, 
+                   max_cluster: int = 11) -> None:
         kmeans = KMeans()
         visualizer = KElbowVisualizer(kmeans, k=(2, max_cluster))
         visualizer.fit(X)  # Fit the data to the visualizer
@@ -87,13 +93,26 @@ class ClusterAnalysis:
         else:
             visualizer.show()
     
-    def plot_clusters(self, X, y, dimensionality_reduction: str = DimensionalityReduction.PCA):
-        #TODO: Implement plot_clusters method
+    def plot_clusters(self, 
+                      X: np.array, 
+                      y: np.array, 
+                      dimensionality_reduction: str = DimensionalityReduction.PCA):
         if X.shape[0] != y.shape[0]:
             raise ValueError("X and y have different shapes")
         if dimensionality_reduction == DimensionalityReduction.PCA:
             pca = PCA(n_components=2)
             X_new = pca.fit_transform(X)
+        elif dimensionality_reduction == DimensionalityReduction.TSNE:
+            tsne = TSNE(n_components=2, random_state=0)
+            X_new = tsne.fit_transform(X)
+        elif dimensionality_reduction == DimensionalityReduction.UMAP:
+            reducer = umap.UMAP(n_components=2, random_state=0)
+            X_new = reducer.fit_transform(X)
+        elif dimensionality_reduction == DimensionalityReduction.KernelPCA:
+            kpca = KernelPCA(n_components=2, kernel='rbf')
+            X_new = kpca.fit_transform(X)
+        else:
+            raise ValueError(f"Dimensionality reduction {dimensionality_reduction} is not supported.")
         fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(1, 1, 1)
         scatter = ax.scatter(
@@ -108,9 +127,15 @@ class ClusterAnalysis:
         ax.set_xlabel('PC1')
         ax.set_ylabel('PC2')
         plt.colorbar(scatter)
+        plt.show()
     
-    def save_cluster_model(self,):
+    def save_cluster_model(self, file_path:str):
         #TODO: Implement save_cluster_model method
+        with open(file_path, 'w') as f:
+            pickle.dump(self.cluster_model, f)
+    
+    def load_cluster_model(self,):
+        #TODO: Implement load_cluster_model method
         pass
     
 
