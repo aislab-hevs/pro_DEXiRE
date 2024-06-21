@@ -1,0 +1,10 @@
+dexire@git+https://github.com/aislab-hevs/DEXiRE.git@0.0.1
+yellowbrick
+sympy == 1.12
+pytest == 8.1.1
+matplotlib == 3.8.3
+seaborn == 0.13.2
+graphviz == 0.20.3
+d3blocks == 1.4.9
+bnlearn == 0.8.7
+umap-learn
