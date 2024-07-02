@@ -30,7 +30,7 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name='pro_dexire',
+    name='dexire_pro',
     version='0.0.1',
     description='Deep Explanation and Rule Extractor (DEXiRE)\
         is a rule extractor explainer to explain Deep learning modules\

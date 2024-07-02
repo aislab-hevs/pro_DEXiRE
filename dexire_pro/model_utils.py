@@ -55,6 +55,35 @@ class CosineSimilarity(tf.keras.layers.Layer):
 
 import string
 
+def replace_bad_characters(text: str):
+  new_text = text.lower()
+  new_text = new_text.replace('.', '')
+  new_text = re.sub(' +', '_', new_text)
+  new_text = new_text.replace(';', '_')
+  new_text = new_text.replace(',', '_')
+  new_text = new_text.replace(' ', '_')
+  new_text = new_text.replace('/', '_')
+  new_text = new_text.replace('-', '_')
+  #new_text = text.translate(str.maketrans('', '', string.punctuation))
+  return new_text
+
+# generate datasets from data
+def identify_data_types(input_list):
+  numeric_features = []
+  categorical_features = []
+  embedding_list = []
+  for feat in input_list:
+    size = feat.shape[-1]
+    if size > 1:
+      embedding_list.append(feat.name)
+    else:
+      if feat.dtype == tf.string:
+        categorical_features.append(feat.name)
+      else:
+        numeric_features.append(feat.name)
+  return numeric_features, categorical_features, embedding_list
+
+
 def create_model_inputs(feature_names: List[str],
                         numeric_features: List[str],
                         shapes_dict: Dict[str, Tuple] = None):
@@ -73,7 +102,12 @@ def create_model_inputs(feature_names: List[str],
           )
     return inputs
 
-
+# fill nan in columns
+def check_nans(df_test):
+  dict_col_nans = {}
+  for col in df_test.columns:
+    dict_col_nans[col] = sum(df_test[col].isna())
+  return dict_col_nans
 
 def custom_standardization(input_data):
   lowercase = tf.strings.lower(input_data)
@@ -381,3 +415,21 @@ def train_model(train_ds: tf.data.Dataset,
                                         cp_callback,
                                         early_callback])
     return history, checkpoint_path, model_context_m1
+  
+def create_model_inputs(feature_names: List[str],
+                        numeric_features: List[str],
+                        shapes_dict: Dict[str, Tuple] = None):
+    inputs = {}
+    for feature_name in feature_names:
+      shape = ()
+      if shapes_dict is not None and feature_name in shapes_dict.keys():
+        shape = shapes_dict[feature_name]
+      if feature_name in numeric_features:
+          inputs[feature_name] = layers.Input(
+              name=feature_name, shape=shape, dtype=tf.float32
+          )
+      else:
+          inputs[feature_name] = layers.Input(
+              name=feature_name, shape=shape, dtype=tf.string
+          )
+    return inputs
